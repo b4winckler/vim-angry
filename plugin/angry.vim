@@ -61,7 +61,7 @@ function! s:ArgCstyle(count, ...)
     if a:0
       let [b0,l0,c0,o0] = getpos("'<")
       let [b1,l1,c1,o1] = getpos("''")
-      if l0 < l1 || c0 < c1
+      if l0 < l1 || (l0 == l1 && c0 < c1)
         " The old visual area extends further at the beginning than our new
         " visual area does.  Extend the new area to include the old.  This
         " ensures that we can keep extending the visual selection by repeatedly
