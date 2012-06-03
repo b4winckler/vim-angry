@@ -18,6 +18,8 @@ omap <silent> a, <Plug>AngryOuter
 
 function! s:ArgCstyle(...)
   let save_sel = @@
+  let save_mprime = getpos("''")
+  let save_ma = getpos("'a")
   let nrep = v:count1 - 1
 
   try
@@ -32,10 +34,16 @@ function! s:ArgCstyle(...)
     exe "normal! yl"
     let left = @@
 
+    " Skip past whitespace and comments at the start of the object.  (This is
+    " a bit of a hack: the '\%0l' pattern never matches, we use searchpair()
+    " for its 'skip' argument.)
+    call searchpair('\%0l', '', '\S', 'sW', 's:IsCursorOnStringOrComment()')
+    exe "normal! ma"
+
     " Find end of object and store if it is a comma or closing bracket.  The
     " loop takes the command count into account.  Select as many text objects
     " as possible if the command count is larger than the number of objects.
-    if searchpair('(', ',', ')', 'sW', "s:IsCursorOnStringOrComment()") <= 0
+    if searchpair('(', ',', ')', 'W', "s:IsCursorOnStringOrComment()") <= 0
       return
     endif
     exe "normal! yl"
@@ -46,13 +54,15 @@ function! s:ArgCstyle(...)
     endwhile
     let right = @@
 
-    " Start selection from `' marker which was set by searchpair(), but skip
-    " initial comma/bracket and whitespace.
-    let cmd = "v`'wo"
+    " Start selection from `a mark.
+    let cmd = "v`ao"
 
     if right == ','
-      " Include space after comma at the end of argument.
-      let cmd .= "wh"
+      " Include whitespace and comments at the end of the object.  (This is a
+      " bit of a hack: the '\%0l' pattern never matches, we use searchpair()
+      " for its 'skip' argument.)
+      call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnStringOrComment()')
+      let cmd .= 'h'
     else
       " Don't include closing bracket, but include space before argument.  Also
       " include comma before argument if there is one (the alternative is that
@@ -76,6 +86,8 @@ function! s:ArgCstyle(...)
 
   finally
     let @@ = save_sel
+    call setpos("'a", save_ma)
+    call setpos("''", save_mprime)
   endtry
 endfunction
 
