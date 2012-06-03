@@ -1,6 +1,15 @@
 " Function argument text objects ('arg' means 'angry' in Swedish)
+"
 " Author:  Bjorn Winckler <bjorn.winckler@gmail.com>
 " Version: 0.1
+"
+" TODO:
+"
+"   - Inner argument
+"   - Support .
+"   - Generalize to arbitrary separators (e.g. ':', '-', ' ', perhaps even
+"     general strings) and arbitrary brackets (e.g. '{}', '[]', perhaps even
+"     complex strings like '\begin{pmatrix}' and '\end{pmatrix}')
 
 if exists("loaded_angry") || &cp || v:version < 700 | finish | endif
 let loaded_angry = 1
