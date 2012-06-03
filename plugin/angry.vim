@@ -18,76 +18,70 @@ omap <silent> a, <Plug>AngryOuter
 
 function! s:ArgCstyle(...)
   let save_sel = @@
-  let save_mprime = getpos("''")
   let save_ma = getpos("'a")
+  let save_mb = getpos("'b")
   let nrep = v:count1 - 1
 
   try
-    " In visual mode, start searching from the end of the selection.  This way
-    " the selection will extend naturally when repeating the text object.
-    if a:0 | exe "normal! `>" | endif
-
-    " Find beginning of object and store if it is a comma or opening bracket.
-    if searchpair('(', ',', ')', 'bW', "s:IsCursorOnStringOrComment()") <= 0
-      return
+    " Find beginning of object (unless the cursor is on top of a comma or an
+    " opening bracket) and store the position in `b.
+    exe "normal! ylmb"
+    if @@ != ',' && @@ != '('
+      if searchpair('(', ',', ')', 'bW', 's:IsCursorOnStringOrComment()') <= 0
+        return
+      endif
+      exe "normal! ylmb"
     endif
-    exe "normal! yl"
+    " Store whether beginning of object is a comma or an opening bracket.
     let left = @@
 
-    " Skip past whitespace and comments at the start of the object.  (This is
-    " a bit of a hack: the '\%0l' pattern never matches, we use searchpair()
-    " for its 'skip' argument.)
-    call searchpair('\%0l', '', '\S', 'sW', 's:IsCursorOnStringOrComment()')
+    " Skip past whitespace and comments at the start of the object and store
+    " position in `a.  (This is a bit of a hack: the '\%0l' pattern never
+    " matches, we use searchpair() for its 'skip' argument.)
+    call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnStringOrComment()')
     exe "normal! ma"
 
-    " Find end of object and store if it is a comma or closing bracket.  The
-    " loop takes the command count into account.  Select as many text objects
-    " as possible if the command count is larger than the number of objects.
-    if searchpair('(', ',', ')', 'W', "s:IsCursorOnStringOrComment()") <= 0
+    " Find end of object.  In visual mode the search starts at the end of the
+    " selection so that the selection is extended to the right.
+    if a:0 | exe "keepjumps normal! `>" | endif
+    if searchpair('(', ',', ')', 'W', 's:IsCursorOnStringOrComment()') <= 0
       return
     endif
     exe "normal! yl"
+
+    " Keep looking for end of object if a command count was given.  Select as
+    " many objects as possible if the command count is larger than the number
+    " of objects.
     while nrep > 0 && @@ == ',' &&
-          \ searchpair('(', ',', ')', 'W', "s:IsCursorOnStringOrComment()") > 0
+          \ searchpair('(', ',', ')', 'W', 's:IsCursorOnStringOrComment()') > 0
       let nrep -= 1
       exe "normal! yl"
     endwhile
+    " Store whether end of object is a comma or a closing bracket.
     let right = @@
 
-    " Start selection from `a mark.
-    let cmd = "v`ao"
-
     if right == ','
-      " Include whitespace and comments at the end of the object.  (This is a
-      " bit of a hack: the '\%0l' pattern never matches, we use searchpair()
+      " Skip past whitespace and comments at the end of the object.  (This is
+      " a bit of a hack: the '\%0l' pattern never matches, we use searchpair()
       " for its 'skip' argument.)
       call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnStringOrComment()')
-      let cmd .= 'h'
-    else
-      " Don't include closing bracket, but include space before argument.  Also
-      " include comma before argument if there is one (the alternative is that
-      " there is an opening bracket).
-      let cmd .= "ho`'" . (left != "," ? "lo" : "o")
     endif
 
-    if a:0
-      let [b0,l0,c0,o0] = getpos("'<")
-      let [b1,l1,c1,o1] = getpos("''")
-      if l0 < l1 || (l0 == l1 && c0 < c1)
-        " The old visual area extends further at the beginning than our new
-        " visual area does.  Extend the new area to include the old.  This
-        " ensures that we can keep extending the visual selection by repeatedly
-        " typing command sequence for the text object.
-        let cmd .= "o`<o"
-      endif
+    " Select everything from `a mark to character just before cursor position.
+    let cmd = "v`aoh"
+
+    if right == ')'
+      " This is the last object since it ends with a closing bracket.  Include
+      " comma before object if there is one.
+      let cmd .= "o`b" . (left != "," ? "lo" : "o")
     endif
 
-    exe "normal! ". cmd
+    exe "keepjumps normal! " . cmd
 
   finally
     let @@ = save_sel
     call setpos("'a", save_ma)
-    call setpos("''", save_mprime)
+    call setpos("''", save_mb)
   endtry
 endfunction
 
