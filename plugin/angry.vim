@@ -13,13 +13,13 @@ if !exists("g:angry_max_count")
   let g:angry_max_count = 50
 endif
 
-vnoremap <silent> <script> <Plug>OuterArg :<C-U>call
+vnoremap <silent> <script> <Plug>AngryOuter :<C-U>call
       \ <SID>ArgCstyle(min([g:angry_max_count, v:count1]), visualmode())<CR>
-onoremap <silent> <script> <plug>OuterArg :call
+onoremap <silent> <script> <plug>AngryOuter :call
       \ <SID>ArgCstyle(min([g:angry_max_count, v:count1]))<CR>
 
-vmap <silent> aa <Plug>OuterArg
-omap <silent> aa <Plug>OuterArg
+vmap <silent> aa <Plug>AngryOuter
+omap <silent> aa <Plug>AngryOuter
 
 
 function! s:ArgCstyle(count, ...)
