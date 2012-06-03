@@ -2,10 +2,8 @@
 " Author:  Bjorn Winckler <bjorn.winckler@gmail.com>
 " Version: 0.1
 
-if exists("loaded_angry") || &cp || v:version < 700
-  finish
-endif
-" let loaded_angry = 1
+if exists("loaded_angry") || &cp || v:version < 700 | finish | endif
+let loaded_angry = 1
 
 
 vnoremap <silent> <script> <Plug>AngryOuter
