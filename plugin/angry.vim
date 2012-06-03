@@ -14,15 +14,15 @@ if !exists("g:angry_max_count")
 endif
 
 vnoremap <silent> <script> <Plug>OuterArg :<C-U>call
-      \ <SID>ArgC(min([g:angry_max_count, v:count1]), visualmode())<CR>
+      \ <SID>ArgCstyle(min([g:angry_max_count, v:count1]), visualmode())<CR>
 onoremap <silent> <script> <plug>OuterArg :call
-      \ <SID>ArgC(min([g:angry_max_count, v:count1]))<CR>
+      \ <SID>ArgCstyle(min([g:angry_max_count, v:count1]))<CR>
 
 vmap <silent> aa <Plug>OuterArg
 omap <silent> aa <Plug>OuterArg
 
 
-function! s:ArgC(count, ...)
+function! s:ArgCstyle(count, ...)
   let save_sel = @@
 
   try
@@ -75,7 +75,7 @@ function! s:ArgC(count, ...)
     if a:count > 1
       " Use 'exe' instead of a plain 'call' to ensure the visual area markers
       " get set the same way as if the text object was typed.
-      exe "normal! :\<C-U>call \<SID>ArgC(a:count - 1, visualmode())\<CR>"
+      exe "normal! :\<C-U>call \<SID>ArgCstyle(a:count - 1, visualmode())\<CR>"
     endif
   endtry
 endfunction
