@@ -31,12 +31,16 @@ function! s:ArgCstyle(count, ...)
     if a:0 | exe "normal! `>" | endif
 
     " Find beginning of object and store if it is a comma or opening bracket.
-    if searchpair('(', ',', ')', 'bW') <= 0 | return | endif
+    if searchpair('(', ',', ')', 'bW', "s:IsCursorOnStringOrComment()") <= 0
+      return
+    endif
     exe "normal! yl"
     let left = @@
 
     " Find end of object and store if it is a comma or closing bracket.
-    if searchpair('(', ',', ')', 'sW') <= 0 | return | endif
+    if searchpair('(', ',', ')', 'sW', "s:IsCursorOnStringOrComment()") <= 0
+      return
+    endif
     exe "normal! yl"
     let right = @@
 
@@ -78,4 +82,9 @@ function! s:ArgCstyle(count, ...)
       exe "normal! :\<C-U>call \<SID>ArgCstyle(a:count - 1, visualmode())\<CR>"
     endif
   endtry
+endfunction
+
+function! s:IsCursorOnStringOrComment()
+   let syn = synIDattr(synID(line("."), col("."), 0), "name")
+   return syn =~? "string" || syn =~? "comment"
 endfunction
