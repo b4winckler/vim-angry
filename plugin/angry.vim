@@ -7,14 +7,22 @@ if exists("loaded_angry") || &cp || v:version < 700
 endif
 " let loaded_angry = 1
 
-vnoremap <silent> <script> <Plug>OuterArg :<C-U>call <SID>ArgC(visualmode())<CR>
-onoremap <silent> <script> <plug>OuterArg :call <SID>ArgC()<CR>
+if !exists("g:angry_max_count")
+  " Upper bound on v:count for text objects.  This avoids needless processing
+  " time when the count is much larger than the number of arguments.
+  let g:angry_max_count = 50
+endif
+
+vnoremap <silent> <script> <Plug>OuterArg :<C-U>call
+      \ <SID>ArgC(min([g:angry_max_count, v:count1]), visualmode())<CR>
+onoremap <silent> <script> <plug>OuterArg :call
+      \ <SID>ArgC(min([g:angry_max_count, v:count1]))<CR>
 
 vmap <silent> aa <Plug>OuterArg
 omap <silent> aa <Plug>OuterArg
 
 
-function! s:ArgC(...)
+function! s:ArgC(count, ...)
   let save_sel = @@
 
   try
@@ -62,5 +70,12 @@ function! s:ArgC(...)
 
   finally
     let @@ = save_sel
+
+    " Repeat the text object if a count was specified.
+    if a:count > 1
+      " Use 'exe' instead of a plain 'call' to ensure the visual area markers
+      " get set the same way as if the text object was typed.
+      exe "normal! :\<C-U>call \<SID>ArgC(a:count - 1, visualmode())\<CR>"
+    endif
   endtry
 endfunction
