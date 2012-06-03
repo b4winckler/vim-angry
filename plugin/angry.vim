@@ -7,23 +7,18 @@ if exists("loaded_angry") || &cp || v:version < 700
 endif
 " let loaded_angry = 1
 
-if !exists("g:angry_max_count")
-  " Upper bound on v:count for text objects.  This avoids needless processing
-  " time when the count is much larger than the number of arguments.
-  let g:angry_max_count = 50
-endif
 
-vnoremap <silent> <script> <Plug>AngryOuter :<C-U>call
-      \ <SID>ArgCstyle(min([g:angry_max_count, v:count1]), visualmode())<CR>
-onoremap <silent> <script> <plug>AngryOuter :call
-      \ <SID>ArgCstyle(min([g:angry_max_count, v:count1]))<CR>
+vnoremap <silent> <script> <Plug>AngryOuter
+      \ :<C-U>call <SID>ArgCstyle(visualmode())<CR>
+onoremap <silent> <script> <plug>AngryOuter :call <SID>ArgCstyle()<CR>
 
-vmap <silent> aa <Plug>AngryOuter
-omap <silent> aa <Plug>AngryOuter
+vmap <silent> a, <Plug>AngryOuter
+omap <silent> a, <Plug>AngryOuter
 
 
-function! s:ArgCstyle(count, ...)
+function! s:ArgCstyle(...)
   let save_sel = @@
+  let nrep = v:count1 - 1
 
   try
     " In visual mode, start searching from the end of the selection.  This way
@@ -37,11 +32,18 @@ function! s:ArgCstyle(count, ...)
     exe "normal! yl"
     let left = @@
 
-    " Find end of object and store if it is a comma or closing bracket.
+    " Find end of object and store if it is a comma or closing bracket.  The
+    " loop takes the command count into account.  Select as many text objects
+    " as possible if the command count is larger than the number of objects.
     if searchpair('(', ',', ')', 'sW', "s:IsCursorOnStringOrComment()") <= 0
       return
     endif
     exe "normal! yl"
+    while nrep > 0 && @@ == ',' &&
+          \ searchpair('(', ',', ')', 'W', "s:IsCursorOnStringOrComment()") > 0
+      let nrep -= 1
+      exe "normal! yl"
+    endwhile
     let right = @@
 
     " Start selection from `' marker which was set by searchpair(), but skip
@@ -74,13 +76,6 @@ function! s:ArgCstyle(count, ...)
 
   finally
     let @@ = save_sel
-
-    " Repeat the text object if a count was specified.
-    if a:count > 1
-      " Use 'exe' instead of a plain 'call' to ensure the visual area markers
-      " get set the same way as if the text object was typed.
-      exe "normal! :\<C-U>call \<SID>ArgCstyle(a:count - 1, visualmode())\<CR>"
-    endif
   endtry
 endfunction
 
