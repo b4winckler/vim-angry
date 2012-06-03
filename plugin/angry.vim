@@ -32,14 +32,18 @@ function! s:ArgC(...)
     exe "normal! yl"
     let right = @@
 
+    " Start selection from `' marker which was set by searchpair(), but skip
+    " initial comma/bracket and whitespace.
+    let cmd = "v`'wo"
+
     if right == ','
       " Include space after comma at the end of argument.
-      let extra = "wh"
+      let cmd .= "wh"
     else
       " Don't include closing bracket, but include space before argument.  Also
       " include comma before argument if there is one (the alternative is that
       " there is an opening bracket).
-      let extra = "ho`'" . (left != "," ? "lo" : "o")
+      let cmd .= "ho`'" . (left != "," ? "lo" : "o")
     endif
 
     if a:0
@@ -50,11 +54,11 @@ function! s:ArgC(...)
         " visual area does.  Extend the new area to include the old.  This
         " ensures that we can keep extending the visual selection by repeatedly
         " typing command sequence for the text object.
-        let extra .= "o`<o"
+        let cmd .= "o`<o"
       endif
     endif
 
-    exe "normal! v`'wo" . extra
+    exe "normal! ". cmd
 
   finally
     let @@ = save_sel
