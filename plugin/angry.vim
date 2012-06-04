@@ -53,10 +53,16 @@ function! s:ArgCstyle(outer, ...)
     call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnComment()')
     exe "normal! ma"
 
-    " Find end of object.  In visual mode the search starts at the end of the
-    " selection so that the selection is extended to the right.
-    if a:0 | exe "keepjumps normal! `>" | endif
-    if searchpair('(', ',', ')', 'W', 's:IsCursorOnStringOrComment()') <= 0
+    " Find end of object.  Note that a match at the cursor position is
+    " accepted -- this ensures that a closing bracket won't get skipped past.
+    " In visual mode the search starts at the end of the selection so that the
+    " selection is extended to the right (just make sure the selection
+    " actually ends to the right of the cursor position so that we don't get a
+    " 'negative selection').
+    if a:0 && s:PosStrictlyOrdered(".", "'>")
+      exe "keepjumps normal! `>"
+    endif
+    if searchpair('(', ',', ')', 'cW', 's:IsCursorOnStringOrComment()') <= 0
       return
     endif
     exe "normal! yl"
@@ -106,4 +112,10 @@ endfunction
 function! s:IsCursorOnStringOrComment()
    let syn = synIDattr(synID(line("."), col("."), 0), "name")
    return syn =~? "string" || syn =~? "comment"
+endfunction
+
+function! s:PosStrictlyOrdered(p0, p1)
+  let l0 = getpos(a:p0)
+  let l1 = getpos(a:p1)
+  return l0[2] < l1[2] || (l0[2] == l1[2] && l0[3] < l1[3])
 endfunction
