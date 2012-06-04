@@ -80,7 +80,9 @@ function! s:ArgCstyle(outer, ...)
     endif
 
     " Select everything from `a mark to character just before cursor position.
-    let cmd = "v`aoh"
+    " Use '^H' instead of plain 'h' in case cursor is in column zero ('h' will
+    " not go back a line but '^H' will).
+    let cmd = "v`ao\<C-H>"
 
     if right == ')' && a:outer
       " This is the last object since it ends with a closing bracket.  Include
