@@ -5,7 +5,6 @@
 "
 " TODO:
 "
-"   - Inner argument
 "   - Support .
 "   - Generalize to arbitrary separators (e.g. ':', '-', ' ', perhaps even
 "     general strings) and arbitrary brackets (e.g. '{}', '[]', perhaps even
@@ -17,14 +16,19 @@ let loaded_angry = 1
 
 
 vnoremap <silent> <script> <Plug>AngryOuter
-      \ :<C-U>call <SID>ArgCstyle(visualmode())<CR>
-onoremap <silent> <script> <plug>AngryOuter :call <SID>ArgCstyle()<CR>
+      \ :<C-U>call <SID>ArgCstyle(1, visualmode())<CR>
+vnoremap <silent> <script> <Plug>AngryInner
+      \ :<C-U>call <SID>ArgCstyle(0, visualmode())<CR>
+onoremap <silent> <script> <plug>AngryOuter :call <SID>ArgCstyle(1)<CR>
+onoremap <silent> <script> <plug>AngryInner :call <SID>ArgCstyle(0)<CR>
 
 vmap <silent> a, <Plug>AngryOuter
 omap <silent> a, <Plug>AngryOuter
+vmap <silent> i, <Plug>AngryInner
+omap <silent> i, <Plug>AngryInner
 
 
-function! s:ArgCstyle(...)
+function! s:ArgCstyle(outer, ...)
   let save_sel = @@
   let save_ma = getpos("'a")
   let save_mb = getpos("'b")
@@ -68,7 +72,7 @@ function! s:ArgCstyle(...)
     " Store whether end of object is a comma or a closing bracket.
     let right = @@
 
-    if right == ','
+    if right == ',' && a:outer
       " Skip past whitespace and comments at the end of the object.  (This is
       " a bit of a hack: the '\%0l' pattern never matches, we use searchpair()
       " for its 'skip' argument.)
@@ -78,7 +82,7 @@ function! s:ArgCstyle(...)
     " Select everything from `a mark to character just before cursor position.
     let cmd = "v`aoh"
 
-    if right == ')'
+    if right == ')' && a:outer
       " This is the last object since it ends with a closing bracket.  Include
       " comma before object if there is one.
       let cmd .= "o`b" . (left != "," ? "lo" : "o")
