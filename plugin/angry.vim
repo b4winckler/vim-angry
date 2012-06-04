@@ -45,7 +45,7 @@ function! s:ArgCstyle(...)
     " Skip past whitespace and comments at the start of the object and store
     " position in `a.  (This is a bit of a hack: the '\%0l' pattern never
     " matches, we use searchpair() for its 'skip' argument.)
-    call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnStringOrComment()')
+    call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnComment()')
     exe "normal! ma"
 
     " Find end of object.  In visual mode the search starts at the end of the
@@ -71,7 +71,7 @@ function! s:ArgCstyle(...)
       " Skip past whitespace and comments at the end of the object.  (This is
       " a bit of a hack: the '\%0l' pattern never matches, we use searchpair()
       " for its 'skip' argument.)
-      call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnStringOrComment()')
+      call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnComment()')
     endif
 
     " Select everything from `a mark to character just before cursor position.
@@ -90,6 +90,10 @@ function! s:ArgCstyle(...)
     call setpos("'a", save_ma)
     call setpos("''", save_mb)
   endtry
+endfunction
+
+function! s:IsCursorOnComment()
+   return synIDattr(synID(line("."), col("."), 0), "name") =~? "comment"
 endfunction
 
 function! s:IsCursorOnStringOrComment()
