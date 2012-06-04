@@ -10,6 +10,7 @@
 "   - Generalize to arbitrary separators (e.g. ':', '-', ' ', perhaps even
 "     general strings) and arbitrary brackets (e.g. '{}', '[]', perhaps even
 "     complex strings like '\begin{pmatrix}' and '\end{pmatrix}')
+"   - Support empty object (e.g. ',,' and ',/* comment */,')
 
 if exists("loaded_angry") || &cp || v:version < 700 | finish | endif
 let loaded_angry = 1
