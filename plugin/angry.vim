@@ -33,7 +33,7 @@ function! s:ArgCstyle(...)
     " Find beginning of object (unless the cursor is on top of a comma or an
     " opening bracket) and store the position in `b.
     exe "normal! ylmb"
-    if @@ != ',' && @@ != '('
+    if s:IsCursorOnStringOrComment() || !(@@ == ',' || @@ == '(')
       if searchpair('(', ',', ')', 'bW', 's:IsCursorOnStringOrComment()') <= 0
         return
       endif
