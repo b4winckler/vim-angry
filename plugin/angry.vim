@@ -5,6 +5,8 @@
 "
 " TODO:
 "
+"   - List() does not handle 'one item per line' very well
+"   - List() does not handle comments properly
 "   - Support .
 "   - Generalize to arbitrary separators (e.g. ':', '-', ' ', perhaps even
 "     general strings) and arbitrary brackets (e.g. '{}', '[]', perhaps even
