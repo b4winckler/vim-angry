@@ -10,6 +10,7 @@
 "     general strings) and arbitrary brackets (e.g. '{}', '[]', perhaps even
 "     complex strings like '\begin{pmatrix}' and '\end{pmatrix}')
 "   - Support empty object (e.g. ',,' and ',/* comment */,')
+"   - Growing to last argument no longer works
 
 if exists("loaded_angry") || &cp || v:version < 700 | finish | endif
 let loaded_angry = 1
@@ -101,7 +102,7 @@ function! s:ArgCstyle(outer, ...)
   finally
     let @@ = save_sel
     call setpos("'a", save_ma)
-    call setpos("''", save_mb)
+    call setpos("'b", save_mb)
   endtry
 endfunction
 
