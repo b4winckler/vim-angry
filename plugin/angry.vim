@@ -29,6 +29,114 @@ vmap <silent> i, <Plug>AngryInner
 omap <silent> i, <Plug>AngryInner
 
 
+vn  <silent> aA :<C-U>call <SID>List('(', ')', ',', 1, 1, visualmode())<CR>
+ono <silent> aA :call      <SID>List('(', ')', ',', 1, 1)<CR>
+vn  <silent> iA :<C-U>call <SID>List('(', ')', ',', 1, 0, visualmode())<CR>
+ono <silent> iA :call      <SID>List('(', ')', ',', 1, 0)<CR>
+
+vn  <silent> aa :<C-U>call <SID>List('(', ')', ',', 0, 1, visualmode())<CR>
+ono <silent> aa :call      <SID>List('(', ')', ',', 0, 1)<CR>
+vn  <silent> ia :<C-U>call <SID>List('(', ')', ',', 0, 0, visualmode())<CR>
+ono <silent> ia :call      <SID>List('(', ')', ',', 0, 0)<CR>
+
+vn  <silent> aL :<C-U>call <SID>List('[[]', ']', ',', 1, 1, visualmode())<CR>
+ono <silent> aL :call      <SID>List('[[]', ']', ',', 1, 1)<CR>
+vn  <silent> iL :<C-U>call <SID>List('[[]', ']', ',', 1, 0, visualmode())<CR>
+ono <silent> iL :call      <SID>List('[[]', ']', ',', 1, 0)<CR>
+
+vn  <silent> al :<C-U>call <SID>List('[[]', ']', ',', 0, 1, visualmode())<CR>
+ono <silent> al :call      <SID>List('[[]', ']', ',', 0, 1)<CR>
+vn  <silent> il :<C-U>call <SID>List('[[]', ']', ',', 0, 0, visualmode())<CR>
+ono <silent> il :call      <SID>List('[[]', ']', ',', 0, 0)<CR>
+
+
+"
+" Select item in a list.
+"
+" The list is enclosed by brackets given by a:left and a:right (e.g. '(' and
+" ')').  Items are separated by a:sep (e.g. ',').
+"
+" If a:prefix is set, then outer selections include the leftmost separator but
+" not the rightmost, and vice versa if a:prefix is not set.
+"
+" If a:outer is set an outer selection is made (which includes separators).
+" If a:outer is not set an inner selection is made (which does not include
+" separators on the boundary).  Outer selections are useful for deleting
+" items, inner selection are useful for changing items.
+"
+function! s:List(left, right, sep, prefix, outer, ...)
+  let save_mb = getpos("'b")
+  let save_unnamed = @"
+  let save_ic = &ic
+  let &ic = 0
+  let times = v:count1 - 1
+
+  try
+    " Backward search for separator or unmatched left bracket.
+    let flags = a:prefix ? 'bcW' : 'bW'
+    if searchpair(a:left, a:sep, a:right, flags,
+          \ 's:IsCursorOnStringOrComment()') <= 0
+      return
+    endif
+    exe "normal! ylmb"
+    let beg = @"
+
+    " Forward search for separator or unmatched right bracket as many times as
+    " specified by the command count.
+    if searchpair(a:left, a:sep, a:right, 'W',
+          \ 's:IsCursorOnStringOrComment()') <= 0
+      return
+    endif
+    exe "normal! yl"
+    while times > 0 && @" =~ a:sep && searchpair(a:left, a:sep, a:right, 'W',
+          \ 's:IsCursorOnStringOrComment()') > 0
+      let times -= 1
+      exe "normal! yl"
+    endwhile
+    let end = @"
+
+    " Build normal command to select visual area.
+    " TODO: The below code is incorrect if the selection is too small.
+    if a:prefix
+      " Select the left separator, but not the right
+      let cmd = "\<C-H>v`bo"
+      if !a:outer || a:left =~ beg
+        " Shrink selection on the left
+        let cmd .= "olo"
+      endif
+      if a:outer && a:left =~ beg && a:sep =~ end
+        " Extend selection on the right
+        let cmd .= "l"
+      end
+    else
+      " Select the right separator, but not the left
+      let cmd = "v`blo"
+      if !a:outer || a:right =~ end
+        " Shrink selection on the right
+        let cmd .= "\<C-H>"
+      endif
+      if a:outer && a:right =~ end && a:sep =~ beg
+        " Extend selection on the left
+        let cmd .= "o\<C-H>o"
+      endif
+    endif
+
+    if &sel == "exclusive"
+      " The last character is not included in the selection when 'sel' is
+      " exclusive so extend selection by one character on the right to
+      " compensate.  Note that <Space> can go to next line if the cursor is on
+      " the end of line, whereas 'l' can't.
+      let cmd .= "\<Space>"
+    endif
+
+    exe "keepjumps normal! " . cmd
+  finally
+    call setpos("'b", save_mb)
+    let @" = save_unnamed
+    let &ic = save_ic
+  endtry
+endfunction
+
 function! s:ArgCstyle(outer, ...)
   let save_sel = @@
   let save_ma = getpos("'a")
