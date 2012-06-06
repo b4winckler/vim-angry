@@ -1,18 +1,23 @@
-" Function argument text objects ('arg' means 'angry' in Swedish)
+" Text objects for function arguments ('arg' means 'angry' in Swedish) and
+" other items surrounded by brackets and separated by commas.
 "
 " Author:  Bjorn Winckler <bjorn.winckler@gmail.com>
 " Version: 0.1
 "
 " TODO:
 "
-"   - List() does not handle 'one item per line' very well
-"   - List() does not handle comments properly
-"   - Support .
-"   - Generalize to arbitrary separators (e.g. ':', '-', ' ', perhaps even
-"     general strings) and arbitrary brackets (e.g. '{}', '[]', perhaps even
-"     complex strings like '\begin{pmatrix}' and '\end{pmatrix}')
-"   - Support empty object (e.g. ',,' and ',/* comment */,')
-"   - Growing to last argument no longer works
+" - Mixed brackets do not work well, e.g. f(x[ ,3], 4) fails to detect the
+"   first argument
+" - Growing selection in visual mode does not work
+" - 'One item per line' is not handled very well
+" - Comments are not handled properly (difficult to accomodate all styles,
+"   e.g. comment after argument, comment on line above argument, ...)
+" - Support .
+" - Support empty object (e.g. ',,' and ',/* comment */,')
+" - Generalize to arbitrary separators (e.g. ':', '-', ' ', perhaps even
+"   general strings)
+" - Generalize to arbitrary brackets (e.g. complex strings like
+"   '\begin{pmatrix}' and '\end{pmatrix}')
 
 if exists("loaded_angry") || &cp || v:version < 700 | finish | endif
 let loaded_angry = 1
