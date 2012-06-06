@@ -18,39 +18,90 @@ if exists("loaded_angry") || &cp || v:version < 700 | finish | endif
 let loaded_angry = 1
 
 
-vnoremap <silent> <script> <Plug>AngryOuter
-      \ :<C-U>call <SID>ArgCstyle(1, visualmode())<CR>
-vnoremap <silent> <script> <Plug>AngryInner
-      \ :<C-U>call <SID>ArgCstyle(0, visualmode())<CR>
-onoremap <silent> <script> <plug>AngryOuter :call <SID>ArgCstyle(1)<CR>
-onoremap <silent> <script> <plug>AngryInner :call <SID>ArgCstyle(0)<CR>
+vnoremap <silent> <script> <Plug>AngryOuterPrefix
+      \ :<C-U>call <SID>Item(1, 1, visualmode())<CR>
+vnoremap <silent> <script> <Plug>AngryOuterSuffix
+      \ :<C-U>call <SID>Item(0, 1, visualmode())<CR>
+vnoremap <silent> <script> <Plug>AngryInnerPrefix
+      \ :<C-U>call <SID>Item(1, 0, visualmode())<CR>
+vnoremap <silent> <script> <Plug>AngryInnerSuffix
+      \ :<C-U>call <SID>Item(0, 0, visualmode())<CR>
 
-vmap <silent> a, <Plug>AngryOuter
-omap <silent> a, <Plug>AngryOuter
-vmap <silent> i, <Plug>AngryInner
-omap <silent> i, <Plug>AngryInner
+onoremap <silent> <script> <Plug>AngryOuterPrefix :call <SID>Item(1, 1)<CR>
+onoremap <silent> <script> <Plug>AngryOuterSuffix :call <SID>Item(0, 1)<CR>
+onoremap <silent> <script> <Plug>AngryInnerPrefix :call <SID>Item(1, 0)<CR>
+onoremap <silent> <script> <Plug>AngryInnerSuffix :call <SID>Item(0, 0)<CR>
 
 
-vn  <silent> aA :<C-U>call <SID>List('(', ')', ',', 1, 1, visualmode())<CR>
-ono <silent> aA :call      <SID>List('(', ')', ',', 1, 1)<CR>
-vn  <silent> iA :<C-U>call <SID>List('(', ')', ',', 1, 0, visualmode())<CR>
-ono <silent> iA :call      <SID>List('(', ')', ',', 1, 0)<CR>
+"
+" Map to text objects aa (An Angry) and ia (Inner Angry) unless disabled.
+"
+" The objects aA and iA are similar to aa and ia, except aA and iA match at
+" closing brackets, whereas aa and ia match at opening brackets and commas.
+" Generally, the lowercase versions match to the right and the uppercase
+" versions match to the left of the cursor.
+"
+if !exists("g:angry_disable_maps")
+  vmap <silent> aa <Plug>AngryOuterPrefix
+  omap <silent> aa <Plug>AngryOuterPrefix
+  vmap <silent> ia <Plug>AngryInnerPrefix
+  omap <silent> ia <Plug>AngryInnerPrefix
 
-vn  <silent> aa :<C-U>call <SID>List('(', ')', ',', 0, 1, visualmode())<CR>
-ono <silent> aa :call      <SID>List('(', ')', ',', 0, 1)<CR>
-vn  <silent> ia :<C-U>call <SID>List('(', ')', ',', 0, 0, visualmode())<CR>
-ono <silent> ia :call      <SID>List('(', ')', ',', 0, 0)<CR>
+  vmap <silent> aA <Plug>AngryOuterSuffix
+  omap <silent> aA <Plug>AngryOuterSuffix
+  vmap <silent> iA <Plug>AngryInnerSuffix
+  omap <silent> iA <Plug>AngryInnerSuffix
+endif
 
-vn  <silent> aL :<C-U>call <SID>List('[[]', ']', ',', 1, 1, visualmode())<CR>
-ono <silent> aL :call      <SID>List('[[]', ']', ',', 1, 1)<CR>
-vn  <silent> iL :<C-U>call <SID>List('[[]', ']', ',', 1, 0, visualmode())<CR>
-ono <silent> iL :call      <SID>List('[[]', ']', ',', 1, 0)<CR>
 
-vn  <silent> al :<C-U>call <SID>List('[[]', ']', ',', 0, 1, visualmode())<CR>
-ono <silent> al :call      <SID>List('[[]', ']', ',', 0, 1)<CR>
-vn  <silent> il :<C-U>call <SID>List('[[]', ']', ',', 0, 0, visualmode())<CR>
-ono <silent> il :call      <SID>List('[[]', ']', ',', 0, 0)<CR>
+"
+" Select an item in a list enclosed by brackets and separated by commas.  The
+" type of bracket is picked automatically.
+"
+" If a:prefix is set a comma or opening bracket will be matched at the cursor.
+" If a:prefix is not set a closing bracket will be matched at the cursor.
+"
+" If a:outer is set the surrounding commas will be selected, otherwise not.
+"
+function! s:Item(prefix, outer, ...)
+  let times = v:count1
 
+  let bracket = s:WhichBrackets(a:prefix)
+  if bracket == []
+    return
+  endif
+
+  " FIXME: Passing '...' arguments on like this is clumsy.  Is there a better
+  " way?  At the moment it is presumed only one extra parameter may be given.
+  if a:0
+    call s:List(bracket[0], bracket[1], ',', a:prefix, a:outer, times, a:1)
+  else
+    call s:List(bracket[0], bracket[1], ',', a:prefix, a:outer, times)
+  endif
+endfunction
+
+"
+" Determine which brackets are surrounding the cursor.  This algorithm is not
+" trying to be clever.  It may need to be improved.
+"
+function! s:WhichBrackets(prefix)
+  let save_mc = getpos("'c")
+  exe "normal! mc"
+
+  let flags = a:prefix ? 'bcW' : 'bW'
+  for [l, r] in [['(', ')'], ['\[', ']'], ['{', '}'], ['<', '>']]
+    if searchpair(l, '', r, flags, 's:IsCursorOnStringOrComment()') > 0 &&
+          \ searchpair(l, '', r, 'W', 's:IsCursorOnStringOrComment()') > 0
+      exe "keepjumps normal! `c"
+      call setpos("'c", save_mc)
+      return [l, r]
+    endif
+    exe "keepjumps normal! `c"
+  endfor
+
+  call setpos("'c", save_mc)
+  return []
+endfunction
 
 "
 " Select item in a list.
@@ -66,12 +117,11 @@ ono <silent> il :call      <SID>List('[[]', ']', ',', 0, 0)<CR>
 " separators on the boundary).  Outer selections are useful for deleting
 " items, inner selection are useful for changing items.
 "
-function! s:List(left, right, sep, prefix, outer, ...)
+function! s:List(left, right, sep, prefix, outer, times, ...)
   let save_mb = getpos("'b")
   let save_unnamed = @"
   let save_ic = &ic
   let &ic = 0
-  let times = v:count1 - 1
 
   try
     " Backward search for separator or unmatched left bracket.
@@ -90,6 +140,7 @@ function! s:List(left, right, sep, prefix, outer, ...)
       return
     endif
     exe "normal! yl"
+    let times = a:times - 1
     while times > 0 && @" =~ a:sep && searchpair(a:left, a:sep, a:right, 'W',
           \ 's:IsCursorOnStringOrComment()') > 0
       let times -= 1
