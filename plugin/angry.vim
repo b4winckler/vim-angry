@@ -81,7 +81,7 @@ function! s:List(left, right, sep, prefix, outer, ...)
       return
     endif
     exe "normal! ylmb"
-    let beg = @"
+    let first = @"
 
     " Forward search for separator or unmatched right bracket as many times as
     " specified by the command count.
@@ -95,29 +95,29 @@ function! s:List(left, right, sep, prefix, outer, ...)
       let times -= 1
       exe "normal! yl"
     endwhile
-    let end = @"
+    let last = @"
 
     " Build normal command to select visual area.
     " TODO: The below code is incorrect if the selection is too small.
     if a:prefix
       " Select the left separator, but not the right
       let cmd = "\<C-H>v`bo"
-      if !a:outer || a:left =~ beg
+      if !a:outer || a:left =~ first
         " Shrink selection on the left
         let cmd .= "olo"
       endif
-      if a:outer && a:left =~ beg && a:sep =~ end
+      if a:outer && a:left =~ first && a:sep =~ last
         " Extend selection on the right
         let cmd .= "l"
-      end
+      endif
     else
       " Select the right separator, but not the left
       let cmd = "v`blo"
-      if !a:outer || a:right =~ end
+      if !a:outer || a:right =~ last
         " Shrink selection on the right
         let cmd .= "\<C-H>"
       endif
-      if a:outer && a:right =~ end && a:sep =~ beg
+      if a:outer && a:right =~ last && a:sep =~ first
         " Extend selection on the left
         let cmd .= "o\<C-H>o"
       endif
