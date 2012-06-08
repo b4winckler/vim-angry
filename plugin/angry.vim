@@ -6,8 +6,6 @@
 "
 " TODO:
 "
-" - Mixed brackets do not work well, e.g. f(x[ ,3], 4) fails to detect the
-"   first argument
 " - Growing selection in visual mode does not work
 " - 'One item per line' is not handled very well
 " - Comments are not handled properly (difficult to accomodate all styles,
@@ -21,22 +19,6 @@
 
 if exists("loaded_angry") || &cp || v:version < 700 | finish | endif
 let loaded_angry = 1
-
-
-vnoremap <silent> <script> <Plug>AngryOuterPrefix
-      \ :<C-U>call <SID>Item(1, 1, visualmode())<CR>
-vnoremap <silent> <script> <Plug>AngryOuterSuffix
-      \ :<C-U>call <SID>Item(0, 1, visualmode())<CR>
-vnoremap <silent> <script> <Plug>AngryInnerPrefix
-      \ :<C-U>call <SID>Item(1, 0, visualmode())<CR>
-vnoremap <silent> <script> <Plug>AngryInnerSuffix
-      \ :<C-U>call <SID>Item(0, 0, visualmode())<CR>
-
-onoremap <silent> <script> <Plug>AngryOuterPrefix :call <SID>Item(1, 1)<CR>
-onoremap <silent> <script> <Plug>AngryOuterSuffix :call <SID>Item(0, 1)<CR>
-onoremap <silent> <script> <Plug>AngryInnerPrefix :call <SID>Item(1, 0)<CR>
-onoremap <silent> <script> <Plug>AngryInnerSuffix :call <SID>Item(0, 0)<CR>
-
 
 "
 " Map to text objects aa (An Angry) and ia (Inner Angry) unless disabled.
@@ -58,55 +40,51 @@ if !exists("g:angry_disable_maps")
   omap <silent> iA <Plug>AngryInnerSuffix
 endif
 
+"
+" Specify which patterns to be used to find left and right brackets.
+"
+" TODO: This should probably be determined on a per-buffer (or filetype) basis.
+"
+if !exists('g:angry_brackets')
+  let g:angry_brackets = ['[[({]', '[])}]']
+endif
 
 "
-" Select an item in a list enclosed by brackets and separated by commas.  The
-" type of bracket is picked automatically.
+" Specify which separator to use.
 "
-" If a:prefix is set a comma or opening bracket will be matched at the cursor.
-" If a:prefix is not set a closing bracket will be matched at the cursor.
+" TODO: This should probably be determined on a per-buffer (or filetype) basis.
 "
-" If a:outer is set the surrounding commas will be selected, otherwise not.
-"
-function! s:Item(prefix, outer, ...)
-  let times = v:count1
+if !exists('g:angry_separator')
+  let g:angry_separator = ','
+endif
 
-  let bracket = s:WhichBrackets(a:prefix)
-  if bracket == []
-    return
-  endif
 
-  " FIXME: Passing '...' arguments on like this is clumsy.  Is there a better
-  " way?  At the moment it is presumed only one extra parameter may be given.
-  if a:0
-    call s:List(bracket[0], bracket[1], ',', a:prefix, a:outer, times, a:1)
-  else
-    call s:List(bracket[0], bracket[1], ',', a:prefix, a:outer, times)
-  endif
-endfunction
+vnoremap <silent> <script> <Plug>AngryOuterPrefix :<C-U>call
+      \ <SID>List(g:angry_brackets[0], g:angry_brackets[1], g:angry_separator,
+      \           1, 1, v:count1, visualmode())<CR>
+vnoremap <silent> <script> <Plug>AngryOuterSuffix :<C-U>call
+      \ <SID>List(g:angry_brackets[0], g:angry_brackets[1], g:angry_separator,
+      \           0, 1, v:count1, visualmode())<CR>
+vnoremap <silent> <script> <Plug>AngryInnerPrefix :<C-U>call
+      \ <SID>List(g:angry_brackets[0], g:angry_brackets[1], g:angry_separator,
+      \           1, 0, v:count1, visualmode())<CR>
+vnoremap <silent> <script> <Plug>AngryInnerSuffix :<C-U>call
+      \ <SID>List(g:angry_brackets[0], g:angry_brackets[1], g:angry_separator,
+      \           0, 0, v:count1, visualmode())<CR>
 
-"
-" Determine which brackets are surrounding the cursor.  This algorithm is not
-" trying to be clever.  It may need to be improved.
-"
-function! s:WhichBrackets(prefix)
-  let save_mc = getpos("'c")
-  exe "normal! mc"
+onoremap <silent> <script> <Plug>AngryOuterPrefix :call
+      \ <SID>List(g:angry_brackets[0], g:angry_brackets[1], g:angry_separator,
+      \           1, 1, v:count1)<CR>
+onoremap <silent> <script> <Plug>AngryOuterSuffix :call
+      \ <SID>List(g:angry_brackets[0], g:angry_brackets[1], g:angry_separator,
+      \           0, 1, v:count1)<CR>
+onoremap <silent> <script> <Plug>AngryInnerPrefix :call
+      \ <SID>List(g:angry_brackets[0], g:angry_brackets[1], g:angry_separator,
+      \           1, 0, v:count1)<CR>
+onoremap <silent> <script> <Plug>AngryInnerSuffix :call
+      \ <SID>List(g:angry_brackets[0], g:angry_brackets[1], g:angry_separator,
+      \           0, 0, v:count1)<CR>
 
-  let flags = a:prefix ? 'bcW' : 'bW'
-  for [l, r] in [['(', ')'], ['\[', ']'], ['{', '}'], ['<', '>']]
-    if searchpair(l, '', r, flags, 's:IsCursorOnStringOrComment()') > 0 &&
-          \ searchpair(l, '', r, 'W', 's:IsCursorOnStringOrComment()') > 0
-      exe "keepjumps normal! `c"
-      call setpos("'c", save_mc)
-      return [l, r]
-    endif
-    exe "keepjumps normal! `c"
-  endfor
-
-  call setpos("'c", save_mc)
-  return []
-endfunction
 
 "
 " Select item in a list.
@@ -226,7 +204,7 @@ function! s:ArgCstyle(outer, ...)
     " selection is extended to the right (just make sure the selection
     " actually ends to the right of the cursor position so that we don't get a
     " 'negative selection').
-    if a:0 && s:PosStrictlyOrdered(".", "'>")
+    if a:0 > 0 && s:PosStrictlyOrdered(".", "'>")
       exe "keepjumps normal! `>"
     endif
     if searchpair('(', ',', ')', 'cW', 's:IsCursorOnStringOrComment()') <= 0
