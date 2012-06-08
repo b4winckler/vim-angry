@@ -17,7 +17,7 @@
 " - Generalize to arbitrary brackets (e.g. complex strings like
 "   '\begin{pmatrix}' and '\end{pmatrix}')
 
-if exists("loaded_angry") || &cp || v:version < 700 | finish | endif
+" if exists("loaded_angry") || &cp || v:version < 700 | finish | endif
 let loaded_angry = 1
 
 "
@@ -103,6 +103,7 @@ onoremap <silent> <script> <Plug>AngryInnerSuffix :call
 "
 function! s:List(left, right, sep, prefix, outer, times, ...)
   let save_mb = getpos("'b")
+  let save_me = getpos("'e")
   let save_unnamed = @"
   let save_ic = &ic
   let &ic = 0
@@ -132,29 +133,42 @@ function! s:List(left, right, sep, prefix, outer, times, ...)
     endwhile
     let last = @"
 
-    " Build normal command to select visual area.
     " TODO: The below code is incorrect if the selection is too small.
-    if a:prefix
-      " Select the left separator, but not the right
-      let cmd = "\<C-H>v`bo"
-      if !a:outer || a:left =~ first
-        " Shrink selection on the left
-        let cmd .= "olo"
-      endif
-      if a:outer && a:left =~ first && a:sep =~ last
-        " Extend selection on the right
-        let cmd .= "l"
-      endif
+    let cmd = "v`e"
+    if !a:outer
+      call search('\S', 'bW')
+      exe "keepjumps normal! me`b"
+      call search('\S', 'W')
     else
-      " Select the right separator, but not the left
-      let cmd = "v`blo"
-      if !a:outer || a:right =~ last
-        " Shrink selection on the right
+      if a:sep =~ first && a:sep =~ last
+        " Separators on both sides
+        if a:prefix
+          call search('\S', 'bW')
+          exe "keepjumps normal! me`b"
+          call search('\S', 'bW')
+          let cmd .= "o\<Space>o"
+        else
+          call search('\S', 'W')
+          exe "keepjumps normal! me`b"
+          call search('\S', 'W')
+          let cmd .= "\<C-H>"
+        endif
+      elseif a:sep =~ first
+        " Separator on the left, bracket on the right
+        call search('\S', 'bW')
+        exe "keepjumps normal! me`b"
+        call search('\S', 'bW')
+        let cmd .= "o\<Space>o"
+      elseif a:sep =~ last
+        " Bracket on the left, separator on the right
+        call search('\S', 'W')
+        exe "keepjumps normal! me`b"
+        call search('\S', 'W')
         let cmd .= "\<C-H>"
-      endif
-      if a:outer && a:right =~ last && a:sep =~ first
-        " Extend selection on the left
-        let cmd .= "o\<C-H>o"
+      else
+        " Brackets on both sides
+        exe "keepjumps normal! me`b"
+        let cmd .= "o\<Space>o\<C-H>"
       endif
     endif
 
@@ -169,6 +183,7 @@ function! s:List(left, right, sep, prefix, outer, times, ...)
     exe "keepjumps normal! " . cmd
   finally
     call setpos("'b", save_mb)
+    call setpos("'e", save_me)
     let @" = save_unnamed
     let &ic = save_ic
   endtry
