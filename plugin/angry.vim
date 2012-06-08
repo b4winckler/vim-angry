@@ -21,7 +21,8 @@ if exists("loaded_angry") || &cp || v:version < 700 | finish | endif
 let loaded_angry = 1
 
 "
-" Map to text objects aa (An Angry) and ia (Inner Angry) unless disabled.
+" Map to text objects aa (An Argument) and ia (Inner Argument) unless
+" disabled.
 "
 " The objects aA and iA are similar to aa and ia, except aA and iA match at
 " closing brackets, whereas aa and ia match at opening brackets and commas.
