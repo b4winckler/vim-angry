@@ -7,15 +7,10 @@
 " TODO:
 "
 " - Growing selection in visual mode does not work
-" - 'One item per line' is not handled very well
 " - Comments are not handled properly (difficult to accomodate all styles,
 "   e.g. comment after argument, comment on line above argument, ...)
 " - Support .
 " - Support empty object (e.g. ',,' and ',/* comment */,')
-" - Generalize to arbitrary separators (e.g. ':', '-', ' ', perhaps even
-"   general strings)
-" - Generalize to arbitrary brackets (e.g. complex strings like
-"   '\begin{pmatrix}' and '\end{pmatrix}')
 
 if exists("loaded_angry") || &cp || v:version < 700 | finish | endif
 let loaded_angry = 1
@@ -42,15 +37,6 @@ if !exists("g:angry_disable_maps")
 endif
 
 "
-" Specify which patterns to be used to find left and right brackets.
-"
-" TODO: This should probably be determined on a per-buffer (or filetype) basis.
-"
-if !exists('g:angry_brackets')
-  let g:angry_brackets = ['[[({]', '[])}]']
-endif
-
-"
 " Specify which separator to use.
 "
 " TODO: This should probably be determined on a per-buffer (or filetype) basis.
@@ -61,37 +47,29 @@ endif
 
 
 vnoremap <silent> <script> <Plug>AngryOuterPrefix :<C-U>call
-      \ <SID>List(g:angry_brackets[0], g:angry_brackets[1], g:angry_separator,
-      \           1, 1, v:count1, visualmode())<CR>
+      \ <SID>List(g:angry_separator, 1, 1, v:count1, visualmode())<CR>
 vnoremap <silent> <script> <Plug>AngryOuterSuffix :<C-U>call
-      \ <SID>List(g:angry_brackets[0], g:angry_brackets[1], g:angry_separator,
-      \           0, 1, v:count1, visualmode())<CR>
+      \ <SID>List(g:angry_separator, 0, 1, v:count1, visualmode())<CR>
 vnoremap <silent> <script> <Plug>AngryInnerPrefix :<C-U>call
-      \ <SID>List(g:angry_brackets[0], g:angry_brackets[1], g:angry_separator,
-      \           1, 0, v:count1, visualmode())<CR>
+      \ <SID>List(g:angry_separator, 1, 0, v:count1, visualmode())<CR>
 vnoremap <silent> <script> <Plug>AngryInnerSuffix :<C-U>call
-      \ <SID>List(g:angry_brackets[0], g:angry_brackets[1], g:angry_separator,
-      \           0, 0, v:count1, visualmode())<CR>
+      \ <SID>List(g:angry_separator, 0, 0, v:count1, visualmode())<CR>
 
 onoremap <silent> <script> <Plug>AngryOuterPrefix :call
-      \ <SID>List(g:angry_brackets[0], g:angry_brackets[1], g:angry_separator,
-      \           1, 1, v:count1)<CR>
+      \ <SID>List(g:angry_separator, 1, 1, v:count1)<CR>
 onoremap <silent> <script> <Plug>AngryOuterSuffix :call
-      \ <SID>List(g:angry_brackets[0], g:angry_brackets[1], g:angry_separator,
-      \           0, 1, v:count1)<CR>
+      \ <SID>List(g:angry_separator, 0, 1, v:count1)<CR>
 onoremap <silent> <script> <Plug>AngryInnerPrefix :call
-      \ <SID>List(g:angry_brackets[0], g:angry_brackets[1], g:angry_separator,
-      \           1, 0, v:count1)<CR>
+      \ <SID>List(g:angry_separator, 1, 0, v:count1)<CR>
 onoremap <silent> <script> <Plug>AngryInnerSuffix :call
-      \ <SID>List(g:angry_brackets[0], g:angry_brackets[1], g:angry_separator,
-      \           0, 0, v:count1)<CR>
+      \ <SID>List(g:angry_separator, 0, 0, v:count1)<CR>
 
 
 "
 " Select item in a list.
 "
-" The list is enclosed by brackets given by a:left and a:right (e.g. '(' and
-" ')').  Items are separated by a:sep (e.g. ',').
+" The list is enclosed by brackets (i.e. '()', '[]', or '{}').  Items are
+" separated by a:sep (e.g. ',').
 "
 " If a:prefix is set, then outer selections include the leftmost separator but
 " not the rightmost, and vice versa if a:prefix is not set.
@@ -101,16 +79,23 @@ onoremap <silent> <script> <Plug>AngryInnerSuffix :call
 " separators on the boundary).  Outer selections are useful for deleting
 " items, inner selection are useful for changing items.
 "
-function! s:List(left, right, sep, prefix, outer, times, ...)
+function! s:List(sep, prefix, outer, times, ...)
+  let lbracket = '[[({]'
+  let rbracket = '[])}]'
   let save_mb = getpos("'b")
   let save_unnamed = @"
   let save_ic = &ic
   let &ic = 0
 
+  " Set 'isk' so that 'w' and 'ge' only skips control characters, whitespace,
+  " separators and brackets.
+  let save_isk = &isk
+  let &isk = "!-~,128-255,^,,^(,^),^[,^],^{,^}"
+
   try
     " Backward search for separator or unmatched left bracket.
     let flags = a:prefix ? 'bcW' : 'bW'
-    if searchpair(a:left, a:sep, a:right, flags,
+    if searchpair(lbracket, a:sep, rbracket, flags,
           \ 's:IsCursorOnStringOrComment()') <= 0
       return
     endif
@@ -119,14 +104,14 @@ function! s:List(left, right, sep, prefix, outer, times, ...)
 
     " Forward search for separator or unmatched right bracket as many times as
     " specified by the command count.
-    if searchpair(a:left, a:sep, a:right, 'W',
+    if searchpair(lbracket, a:sep, rbracket, 'W',
           \ 's:IsCursorOnStringOrComment()') <= 0
       return
     endif
     exe "normal! yl"
     let times = a:times - 1
-    while times > 0 && @" =~ a:sep && searchpair(a:left, a:sep, a:right, 'W',
-          \ 's:IsCursorOnStringOrComment()') > 0
+    while times > 0 && @" =~ a:sep && searchpair(lbracket, a:sep, rbracket,
+          \ 'W', 's:IsCursorOnStringOrComment()') > 0
       let times -= 1
       exe "normal! yl"
     endwhile
@@ -134,28 +119,18 @@ function! s:List(left, right, sep, prefix, outer, times, ...)
 
     " Build normal command to select visual area.
     " TODO: The below code is incorrect if the selection is too small.
-    if a:prefix
+    if !a:outer
+      let cmd = "gev`bwo"
+    elseif a:prefix
       " Select the left separator, but not the right
-      let cmd = "\<C-H>v`bo"
-      if !a:outer || a:left =~ first
-        " Shrink selection on the left
-        let cmd .= "olo"
-      endif
-      if a:outer && a:left =~ first && a:sep =~ last
-        " Extend selection on the right
-        let cmd .= "l"
-      endif
+      let cmd = "v`b" . (a:sep =~ first
+            \ ? (a:sep =~ last ? "ge\<Space>oge" : "ge\<Space>oge")
+            \ : (a:sep =~ last ? "wow\<C-H>"     : "\<Space>o\<C-H>"))
     else
       " Select the right separator, but not the left
-      let cmd = "v`blo"
-      if !a:outer || a:right =~ last
-        " Shrink selection on the right
-        let cmd .= "\<C-H>"
-      endif
-      if a:outer && a:right =~ last && a:sep =~ first
-        " Extend selection on the left
-        let cmd .= "o\<C-H>o"
-      endif
+      let cmd = "v`b" . (a:sep =~ first
+            \ ? (a:sep =~ last ? "wow\<C-H>" : "ge\<Space>oge")
+            \ : (a:sep =~ last ? "wow\<C-H>" : "\<Space>o\<C-H>"))
     endif
 
     if &sel == "exclusive"
@@ -171,6 +146,7 @@ function! s:List(left, right, sep, prefix, outer, times, ...)
     call setpos("'b", save_mb)
     let @" = save_unnamed
     let &ic = save_ic
+    let &isk = save_isk
   endtry
 endfunction
 
