@@ -139,20 +139,37 @@ function! s:List(left, right, sep, prefix, outer, times, ...)
       call search('\S', 'bW')
       exe "keepjumps normal! me`b"
       call search('\S', 'W')
-    else
+    elseif a:prefix
       if a:sep =~ first && a:sep =~ last
         " Separators on both sides
-        if a:prefix
-          call search('\S', 'bW')
-          exe "keepjumps normal! me`b"
-          call search('\S', 'bW')
-          let cmd .= "o\<Space>o"
-        else
-          call search('\S', 'W')
-          exe "keepjumps normal! me`b"
-          call search('\S', 'W')
-          let cmd .= "\<C-H>"
-        endif
+        call searchpair('\S', '', '\%0l', 'bW', 's:IsCursorOnComment()')
+        exe "keepjumps normal! me`b"
+        call searchpair('\S', '', '\%0l', 'bW', 's:IsCursorOnComment()')
+        let cmd .= "o\<Space>o"
+      elseif a:sep =~ first
+        " Separator on the left, bracket on the right
+        call searchpair('\S', '', '\%0l', 'bW', 's:IsCursorOnComment()')
+        exe "keepjumps normal! me`b"
+        call searchpair('\S', '', '\%0l', 'bW', 's:IsCursorOnComment()')
+        let cmd .= "o\<Space>o"
+      elseif a:sep =~ last
+        " Bracket on the left, separator on the right
+        call search('\S', 'W')
+        exe "keepjumps normal! me`b"
+        call search('\S', 'W')
+        let cmd .= "\<C-H>"
+      else
+        " Brackets on both sides
+        exe "keepjumps normal! me`b"
+        let cmd .= "o\<Space>o\<C-H>"
+      endif
+    else  " !a:prefix
+      if a:sep =~ first && a:sep =~ last
+        " Separators on both sides
+        call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnComment()')
+        exe "keepjumps normal! me`b"
+        call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnComment()')
+        let cmd .= "\<C-H>"
       elseif a:sep =~ first
         " Separator on the left, bracket on the right
         call search('\S', 'bW')
@@ -161,9 +178,9 @@ function! s:List(left, right, sep, prefix, outer, times, ...)
         let cmd .= "o\<Space>o"
       elseif a:sep =~ last
         " Bracket on the left, separator on the right
-        call search('\S', 'W')
+        call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnComment()')
         exe "keepjumps normal! me`b"
-        call search('\S', 'W')
+        call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnComment()')
         let cmd .= "\<C-H>"
       else
         " Brackets on both sides
