@@ -1,15 +1,18 @@
+" Author:  Bjorn Winckler
+" Version: 0.1
+" License: (c) 2012 Bjorn Winckler.  Licensed under the same terms as Vim.
+"
+" Summary:
+"
 " Text objects for function arguments ('arg' means 'angry' in Swedish) and
 " other items surrounded by brackets and separated by commas.
 "
-" Author:  Bjorn Winckler <bjorn.winckler@gmail.com>
-" Version: 0.1
-"
 " TODO:
 "
+" - Support repeating daa, caa, etc. with '.'
 " - Growing selection in visual mode does not work
 " - Comments are not handled properly (difficult to accomodate all styles,
 "   e.g. comment after argument, comment on line above argument, ...)
-" - Support .
 " - Support empty object (e.g. ',,' and ',/* comment */,')
 
 if exists("loaded_angry") || &cp || v:version < 700 | finish | endif
@@ -83,6 +86,7 @@ function! s:List(sep, prefix, outer, times, ...)
   let lbracket = '[[({]'
   let rbracket = '[])}]'
   let save_mb = getpos("'b")
+  let save_me = getpos("'e")
   let save_unnamed = @"
   let save_ic = &ic
   let &ic = 0
@@ -117,20 +121,60 @@ function! s:List(sep, prefix, outer, times, ...)
     endwhile
     let last = @"
 
-    " Build normal command to select visual area.
     " TODO: The below code is incorrect if the selection is too small.
+    let cmd = "v`e"
     if !a:outer
-      let cmd = "gev`bwo"
+      call search('\S', 'bW')
+      exe "keepjumps normal! me`b"
+      call search('\S', 'W')
     elseif a:prefix
-      " Select the left separator, but not the right
-      let cmd = "v`b" . (a:sep =~ first
-            \ ? (a:sep =~ last ? "ge\<Space>oge" : "ge\<Space>oge")
-            \ : (a:sep =~ last ? "wow\<C-H>"     : "\<Space>o\<C-H>"))
-    else
-      " Select the right separator, but not the left
-      let cmd = "v`b" . (a:sep =~ first
-            \ ? (a:sep =~ last ? "wow\<C-H>" : "ge\<Space>oge")
-            \ : (a:sep =~ last ? "wow\<C-H>" : "\<Space>o\<C-H>"))
+      if a:sep =~ first && a:sep =~ last
+        " Separators on both sides
+        call searchpair('\S', '', '\%0l', 'bW', 's:IsCursorOnComment()')
+        exe "keepjumps normal! me`b"
+        call searchpair('\S', '', '\%0l', 'bW', 's:IsCursorOnComment()')
+        let cmd .= "o\<Space>o"
+      elseif a:sep =~ first
+        " Separator on the left, bracket on the right
+        call searchpair('\S', '', '\%0l', 'bW', 's:IsCursorOnComment()')
+        exe "keepjumps normal! me`b"
+        call searchpair('\S', '', '\%0l', 'bW', 's:IsCursorOnComment()')
+        let cmd .= "o\<Space>o"
+      elseif a:sep =~ last
+        " Bracket on the left, separator on the right
+        call search('\S', 'W')
+        exe "keepjumps normal! me`b"
+        call search('\S', 'W')
+        let cmd .= "\<C-H>"
+      else
+        " Brackets on both sides
+        exe "keepjumps normal! me`b"
+        let cmd .= "o\<Space>o\<C-H>"
+      endif
+    else  " !a:prefix
+      if a:sep =~ first && a:sep =~ last
+        " Separators on both sides
+        call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnComment()')
+        exe "keepjumps normal! me`b"
+        call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnComment()')
+        let cmd .= "\<C-H>"
+      elseif a:sep =~ first
+        " Separator on the left, bracket on the right
+        call search('\S', 'bW')
+        exe "keepjumps normal! me`b"
+        call search('\S', 'bW')
+        let cmd .= "o\<Space>o"
+      elseif a:sep =~ last
+        " Bracket on the left, separator on the right
+        call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnComment()')
+        exe "keepjumps normal! me`b"
+        call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnComment()')
+        let cmd .= "\<C-H>"
+      else
+        " Brackets on both sides
+        exe "keepjumps normal! me`b"
+        let cmd .= "o\<Space>o\<C-H>"
+      endif
     endif
 
     if &sel == "exclusive"
@@ -144,86 +188,10 @@ function! s:List(sep, prefix, outer, times, ...)
     exe "keepjumps normal! " . cmd
   finally
     call setpos("'b", save_mb)
+    call setpos("'e", save_me)
     let @" = save_unnamed
     let &ic = save_ic
     let &isk = save_isk
-  endtry
-endfunction
-
-function! s:ArgCstyle(outer, ...)
-  let save_sel = @@
-  let save_ma = getpos("'a")
-  let save_mb = getpos("'b")
-  let nrep = v:count1 - 1
-
-  try
-    " Find beginning of object (unless the cursor is on top of a comma or an
-    " opening bracket) and store the position in `b.
-    exe "normal! ylmb"
-    if s:IsCursorOnStringOrComment() || !(@@ == ',' || @@ == '(')
-      if searchpair('(', ',', ')', 'bW', 's:IsCursorOnStringOrComment()') <= 0
-        return
-      endif
-      exe "normal! ylmb"
-    endif
-    " Store whether beginning of object is a comma or an opening bracket.
-    let left = @@
-
-    " Skip past whitespace and comments at the start of the object and store
-    " position in `a.  (This is a bit of a hack: the '\%0l' pattern never
-    " matches, we use searchpair() for its 'skip' argument.)
-    call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnComment()')
-    exe "normal! ma"
-
-    " Find end of object.  Note that a match at the cursor position is
-    " accepted -- this ensures that a closing bracket won't get skipped past.
-    " In visual mode the search starts at the end of the selection so that the
-    " selection is extended to the right (just make sure the selection
-    " actually ends to the right of the cursor position so that we don't get a
-    " 'negative selection').
-    if a:0 > 0 && s:PosStrictlyOrdered(".", "'>")
-      exe "keepjumps normal! `>"
-    endif
-    if searchpair('(', ',', ')', 'cW', 's:IsCursorOnStringOrComment()') <= 0
-      return
-    endif
-    exe "normal! yl"
-
-    " Keep looking for end of object if a command count was given.  Select as
-    " many objects as possible if the command count is larger than the number
-    " of objects.
-    while nrep > 0 && @@ == ',' &&
-          \ searchpair('(', ',', ')', 'W', 's:IsCursorOnStringOrComment()') > 0
-      let nrep -= 1
-      exe "normal! yl"
-    endwhile
-    " Store whether end of object is a comma or a closing bracket.
-    let right = @@
-
-    if right == ',' && a:outer
-      " Skip past whitespace and comments at the end of the object.  (This is
-      " a bit of a hack: the '\%0l' pattern never matches, we use searchpair()
-      " for its 'skip' argument.)
-      call searchpair('\%0l', '', '\S', 'W', 's:IsCursorOnComment()')
-    endif
-
-    " Select everything from `a mark to character just before cursor position.
-    " Use '^H' instead of plain 'h' in case cursor is in column zero ('h' will
-    " not go back a line but '^H' will).
-    let cmd = "v`ao\<C-H>"
-
-    if right == ')' && a:outer
-      " This is the last object since it ends with a closing bracket.  Include
-      " comma before object if there is one.
-      let cmd .= "o`b" . (left != "," ? "lo" : "o")
-    endif
-
-    exe "keepjumps normal! " . cmd
-
-  finally
-    let @@ = save_sel
-    call setpos("'a", save_ma)
-    call setpos("'b", save_mb)
   endtry
 endfunction
 
@@ -234,10 +202,4 @@ endfunction
 function! s:IsCursorOnStringOrComment()
    let syn = synIDattr(synID(line("."), col("."), 0), "name")
    return syn =~? "string" || syn =~? "comment"
-endfunction
-
-function! s:PosStrictlyOrdered(p0, p1)
-  let l0 = getpos(a:p0)
-  let l1 = getpos(a:p1)
-  return l0[2] < l1[2] || (l0[2] == l1[2] && l0[3] < l1[3])
 endfunction
