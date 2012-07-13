@@ -29,7 +29,7 @@ whereas `daA` results in `call( x, /* left */ z )`.
 
 ## Examples
 
-Counts are supported, so e.g. `d3a,` will turn
+Counts are supported, so e.g. `d3aa` will turn
 
     function(a, 33, Rstyle="calls, with commas inside strings, are OK")
 
@@ -37,7 +37,7 @@ into `function()`.  Note that commas inside strings are ignored and so are
 comments (this feature depends on the syntax highlighting to detect strings and
 comments so `'filetype'` must be set properly for this to work).
 
-If the cursor is on the `R` in the above function call, then `da,` results in
+If the cursor is on the `R` in the above function call, then `daa` results in
 `function(a, 33)` so the comma after `33` is properly deleted.
 
 
