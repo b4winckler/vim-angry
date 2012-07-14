@@ -15,8 +15,8 @@
 "   e.g. comment after argument, comment on line above argument, ...)
 " - Support empty object (e.g. ',,' and ',/* comment */,')
 
-if exists("loaded_angry") || &cp || v:version < 700 | finish | endif
-let loaded_angry = 1
+if exists("g:loaded_angry") || &cp || v:version < 700 | finish | endif
+let g:loaded_angry = 1
 
 "
 " Map to text objects aa (An Argument) and ia (Inner Argument) unless
