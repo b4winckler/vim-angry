@@ -91,11 +91,6 @@ function! s:List(sep, prefix, outer, times, ...)
   let save_ic = &ic
   let &ic = 0
 
-  " Set 'isk' so that 'w' and 'ge' only skips control characters, whitespace,
-  " separators and brackets.
-  let save_isk = &isk
-  let &isk = "!-~,128-255,^,,^(,^),^[,^],^{,^}"
-
   try
     " Backward search for separator or unmatched left bracket.
     let flags = a:prefix ? 'bcW' : 'bW'
@@ -122,6 +117,10 @@ function! s:List(sep, prefix, outer, times, ...)
     let last = @"
 
     " TODO: The below code is incorrect if the selection is too small.
+    "
+    " NOTE: The calls to searchpair() with pattern '\%0l' is used only for its
+    " 'skip' argument that is employed to search outside comments (the '\%0l'
+    " pattern never matches).
     let cmd = "v`e"
     if !a:outer
       call search('\S', 'bW')
@@ -191,7 +190,6 @@ function! s:List(sep, prefix, outer, times, ...)
     call setpos("'e", save_me)
     let @" = save_unnamed
     let &ic = save_ic
-    let &isk = save_isk
   endtry
 endfunction
 
