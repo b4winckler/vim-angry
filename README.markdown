@@ -30,6 +30,8 @@ example:
 With the cursor on the `y`, typing `daa` results in `call( x /* right */, z )`,
 whereas `daA` results in `call( x, /* left */ z )`.
 
+## Customizing
+
 Some customization of the plugin is possible:
 
 -   To disable all predefined mappings, add `let g:angry_disable_maps = 1`
@@ -45,7 +47,8 @@ Some customization of the plugin is possible:
 
 ## Examples
 
-Counts are supported, so e.g. `d3aa` will turn
+Counts are supported, so e.g. `d3aa` with the cursor on the first argument will
+turn
 
     function(a, 33, Rstyle="calls, with commas inside strings, are OK")
 
@@ -53,8 +56,8 @@ into `function()`.  Note that commas inside strings are ignored and so are
 comments (this feature depends on the syntax highlighting to detect strings and
 comments so `'filetype'` must be set properly for this to work).
 
-If the cursor is on the `R` in the above function call, then `daa` results in
-`function(a, 33)` so the comma after `33` is properly deleted.
+If the cursor is on the `R` in the above function call, then both `daa` and
+`daA` results in `function(a, 33)` so the comma after `33` is properly deleted.
 
 
 ## Installation
@@ -73,7 +76,6 @@ Alternatively, you can just put the [`angry.vim` script][plugin] in your
 
 ## Deficiencies
 
--   Repeating the last `daa` (for example) with `.` does not work.
 -   Growing the selection in visual mode by repeatedly entering the text object
     is currently not supported.
 -   Mismatched brackets are not handled.
