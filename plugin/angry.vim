@@ -9,7 +9,6 @@
 "
 " TODO:
 "
-" - Support repeating daa, caa, etc. with '.'
 " - Growing selection in visual mode does not work
 " - Comments are not handled properly (difficult to accomodate all styles,
 "   e.g. comment after argument, comment on line above argument, ...)
