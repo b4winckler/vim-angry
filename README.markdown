@@ -70,7 +70,7 @@ $ cd ~/.vim/bundle
 $ git clone https://github.com/b4winckler/vim-angry.git
 ```
 
-Alternatively, you can just put the [`angry.vim` script][plugin] in your
+Alternatively, you can just put [`angry.vim`][plugin] in your
 `~/.vim/plugin` folder (create the folder if it does not already exist).
 
 
